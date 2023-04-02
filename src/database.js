@@ -7,7 +7,7 @@ mongoose.connect(process.env.MONGO_URI, {useNewUrlParser: true, useUnifiedTopolo
 const userSchema = mongoose.Schema({
     username: {
         type: String,
-        required: trusted
+        required: true
     },
     count: Number,
     log: [{
@@ -21,7 +21,7 @@ const userSchema = mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 //Get the user with the given id
-const getUser = (user_id, from=null, to=null, limit=null) => {
+const getUser = (user_id, from, to, limit) => {
 
     //If the optional arguments are available then convert them into correct format
     let start = from;
@@ -35,16 +35,16 @@ const getUser = (user_id, from=null, to=null, limit=null) => {
 
     //Query from the database based on the availability of optional arguments
     if (start !== null && end === null && limit === null) {
-        return User.find({_id: user_id, log: {date: {$gte: from}}});
+        return User.find({_id: user_id, log: {date: {$gte: start}}});
     }
     else if (start !== null && end === null && limit !== null) {
-        return User.find({_id: user_id, log: {date: {$gte: from, $slice: limit}}});
+        return User.find({_id: user_id, log: {date: {$gte: start, $slice: limit}}});
     }
     else if (start !== null && end !== null && limit === null) {
-        return User.find({_id: user_id, log: {date: {$gte: from, $lte: end}}});
+        return User.find({_id: user_id, log: {date: {$gte: from, $lte: to}}});
     }
     else if (start !== null && end !== null && limit !== null) {
-        return User.find({_id: user_id, log: {date: {$gte: from, $lte: end, $slice: limit}}});
+        return User.find({_id: user_id, log: {date: {$gte: start, $lte: end, $slice: limit}}});
     }
     else if (start === null && end !== null && limit === null) {
         return User.find({_id: user_id, log: {date: {$lte: end}}});
@@ -71,7 +71,7 @@ const createUser = async (username) => {
 }
 
 //Add a workout
-const addWorkout = async (user_id, description, duration, date=null) => {
+const addWorkout = async(user_id, description, duration, date=null) => {
     let workoutDate = date;
     //Check that if workoutDate is null, then set workout date to the present date.
     if (workoutDate === null) {
@@ -81,14 +81,12 @@ const addWorkout = async (user_id, description, duration, date=null) => {
         workoutDate = new Date(workoutDate);
     }
 
-    //Find the user with the user_id input
-    const doc = await User.findById(user_id);
+    //Create the workout object
+    const workout = {description: description, duration: duration, date: workoutDate};
 
-    //Update the document appropriately with the given user inputs
-    doc.count = doc.count + 1;
-    doc.log.push({description: description, duration: duration, date: workoutDate});
-    //Save the changes
-    return doc.save();
+    //Find the user with the user_id input and make the necessary updates
+    return User.findByIdAndUpdate(user_id, {$inc: {count: 1}, $push: {log: workout}}, {new: true});
+
 }
 
 //Get all the users

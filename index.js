@@ -1,11 +1,10 @@
 const express = require('express')
 const app = express()
 const cors = require('cors')
-const bodyParser = require('body-parser');
-const { urlencoded } = require('body-parser');
 require('dotenv').config()
 
-app.use(bodyParser, urlencoded({extended: false}));
+app.use(express.json());
+app.use(express.urlencoded({extended: false}));
 app.use(cors())
 app.use(express.static('public'))
 app.get('/', (req, res) => {
@@ -32,9 +31,9 @@ app.route('/api/users').post(async(req, res) => {
 });
 
 //To find a user with the given id and add a workout
-app.route('/api/users/:id/exrecises').post(async(req, res) => {
+app.route('/api/users/:id/exercises').post(async(req, res) => {
   //Get the user inputted details
-  const user_id = req.body._id;
+  const user_id = req.body[':_id'];
   const description = req.body.description;
   const duration = req.body.duration;
   const date = req.body.date;
@@ -65,14 +64,14 @@ app.route('/api/users').get(async(req,res) => {
 });
 
 //Get the details of a particular user
-app.route('/api/users/:id/logs?[from][&to][&limit]').get(async (req, res) => {
+app.route('/api/users/:id/logs').get(async (req, res) => {
   //Get the user input
   const user_id = req.params.id;
 
   //Check the availability of optional arguments
-  const from = req.query.from ? req.query.from : null;
-  const to = req.query.to ? req.query.to : null;
-  const limit = req.query.limit ? parseInt(req.query.limit) : null;
+  const from = req.query.from === undefined ? null : req.query.from;
+  const to = req.query.to === undefined ? null : req.query.to;
+  const limit = req.query.limit === undefined ? null : parseInt(req.query.limit);
 
   //Query the database
   const result = await require("./src/database.js").getUser(user_id, from, to, limit);
@@ -82,11 +81,11 @@ app.route('/api/users/:id/logs?[from][&to][&limit]').get(async (req, res) => {
   "username": result[0].username,
   "count": result[0].count,
   "log": result[0].log.map((e, i, a) => {
-    return ({
-      "description": e.description,
-      "duration": e.duration,
-      "date": e.date.toDateString()
-    });
-  })
+      return ({
+        "description": e.description,
+        "duration": e.duration,
+        "date": e.date.toDateString()
+      });
+    })
   });
 });
