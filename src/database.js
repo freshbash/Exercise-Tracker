@@ -21,42 +21,105 @@ const userSchema = mongoose.Schema({
 const User = mongoose.model("User", userSchema);
 
 //Get the user with the given id
-const getUser = (user_id, from, to, limit) => {
+const getUser = async(user_id, start, end, num) => {
 
-    //If the optional arguments are available then convert them into correct format
-    let start = from;
-    let end = to;
-    if (start !== null) {
-        start = new Date(start);
-    }
-    if (end !== null) {
-        end = new Date(end);
-    }
+    //Create an ObjectId with the given user_id to query the database
+    const id = new mongoose.Types.ObjectId(user_id);
 
     //Query from the database based on the availability of optional arguments
-    if (start !== null && end === null && limit === null) {
-        return User.find({_id: user_id, log: {date: {$gte: start}}});
+    if (start !== null && end === null && num === null) {
+        return User.aggregate([
+            {$match: {_id: id}},
+            {$project: {
+                username: 1,                
+                log: {$filter : {
+                    input: '$log',
+                    as: 'log',
+                    cond: {$gte: ['$$log.date', start]}
+                }}
+            }}
+        ])
     }
-    else if (start !== null && end === null && limit !== null) {
-        return User.find({_id: user_id, log: {date: {$gte: start, $slice: limit}}});
+    else if (start !== null && end === null && num !== null) {
+        return User.aggregate([
+            {$match: {_id: id}},
+            {
+                $project: {
+                    username: 1,
+                    log: {
+                        $filter: {
+                            input: '$log',
+                            as: 'log',
+                            cond: {$gte: ['$$log.date', start]}
+                        }
+                    }
+                }
+            }
+        ])
     }
-    else if (start !== null && end !== null && limit === null) {
-        return User.find({_id: user_id, log: {date: {$gte: from, $lte: to}}});
+    else if (start !== null && end !== null && num === null) {
+        return User.aggregate([
+            {$match: {_id: id}},
+            {$project: {
+                username: 1,
+                log: {$filter: {
+                    input: '$log',
+                    as: 'log',
+                    cond: {$and: [
+                        {$gte: ['$$log.date', start]},
+                        {$lte: ['$$log.date', end]}
+                    ]}
+                }}
+            }}
+        ]);
     }
-    else if (start !== null && end !== null && limit !== null) {
-        return User.find({_id: user_id, log: {date: {$gte: start, $lte: end, $slice: limit}}});
+    else if (start !== null && end !== null && num !== null) {
+        return User.aggregate([
+            {$match: {_id: id}},
+            {$project: {
+                username: 1,
+                log: {$filter: {
+                    input: '$log',
+                    as: 'log',
+                    cond: {$and: [
+                        {$gte: ['$$log.date', start]},
+                        {$lte: ['$$log.date', end]}
+                    ]}
+                }}
+            }}
+        ]);
     }
-    else if (start === null && end !== null && limit === null) {
-        return User.find({_id: user_id, log: {date: {$lte: end}}});
+    else if (start === null && end !== null && num === null) {
+        return User.aggregate([
+            {$match: {_id: id}},
+            {$project: {
+                username: 1,
+                log: {$filter: {
+                    input: '$log',
+                    as: 'log',
+                    cond: {$lte: ['$$log.date', end]}
+                }}
+            }}
+        ])
     }
-    else if (start === null && end !== null && limit !== null) {
-        return User.find({_id: user_id, log: {date: {$lte: end, $slice: limit}}});
+    else if (start === null && end !== null && num !== null) {
+        return User.aggregate([
+            {$match: {_id: id}},
+            {$project: {
+                username: 1,
+                log: {$filter: {
+                    input: '$log',
+                    as: 'log',
+                    cond: {$lte: ['$$log.date', end]}
+                }}
+            }}
+        ])
     }
-    else if (start === null && end === null && limit !== null) {
-        return User.find({_id: user_id, log: {date: {$slice: limit}}});
+    else if (start === null && end === null && num !== null) {
+        return User.findOne({_id: user_id});
     }
     else {
-        return User.find({_id: user_id});
+        return User.findOne({_id: user_id});
     }
 }
 

@@ -69,18 +69,20 @@ app.route('/api/users/:id/logs').get(async (req, res) => {
   const user_id = req.params.id;
 
   //Check the availability of optional arguments
-  const from = req.query.from === undefined ? null : req.query.from;
-  const to = req.query.to === undefined ? null : req.query.to;
+  const from = req.query.from === undefined ? null : new Date(req.query.from);
+  const to = req.query.to === undefined ? null : new Date(req.query.to);
   const limit = req.query.limit === undefined ? null : parseInt(req.query.limit);
 
   //Query the database
   const result = await require("./src/database.js").getUser(user_id, from, to, limit);
 
+  const logArray = limit === null ? result[0].log : result[0].log.slice(0, limit);
+
   //Respond with a JSON with all the dates converted to date string.
   res.json({"_id": result[0]._id,
   "username": result[0].username,
-  "count": result[0].count,
-  "log": result[0].log.map((e, i, a) => {
+  "count": result[0].log.length,
+  "log": logArray.map((e, i, a) => {
       return ({
         "description": e.description,
         "duration": e.duration,
