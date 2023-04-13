@@ -4,7 +4,7 @@ const cors = require('cors')
 require('dotenv').config()
 
 app.use(express.json());
-app.use(express.urlencoded({extended: false}));
+app.use(express.urlencoded({ extended: false }));
 app.use(cors())
 app.use(express.static('public'))
 app.get('/', (req, res) => {
@@ -19,30 +19,40 @@ const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Local: ', `http://localhost:${listener.address().port}`);
 })
 
+
 //Post requests
 //To create and save a user
-app.route('/api/users').post(async(req, res) => {
+app.route('/api/users').post(async (req, res) => {
   //Get the user inputted username
+
+  console.log(req.body);
+
   const username = req.body.username;
   //Create and save the user
   const newUser = await require('./src/database.js').createUser(username);
   //Serve json with the details of the newly created user
-  res.json({"username": newUser.username, "_id": newUser._id});
+  res.json({ "username": newUser.username, "_id": newUser._id });
 });
 
+
 //To find a user with the given id and add a workout
-app.route('/api/users/:id/exercises').post(async(req, res) => {
+app.route('/api/users/:_id/exercises').post(async (req, res) => {
   //Get the user inputted details
-  const user_id = req.body[':_id'];
+  const user_id = req.params._id;
   const description = req.body.description;
   const duration = req.body.duration;
-  const date = req.body.date;
+  const date = req.body.date ? req.body.date : null;
+
+  if (!(user_id) || !(description) || !(duration)) {
+    res.json({ "Error": "Invalid input" });
+    return;
+  }
 
   //Find the user with user_id and add the workout to the user's log
-  const updatedUser = await require('./src/database.js').addWorkout(user_id, description, duration, date ? date : null);
+  const updatedUser = await require('./src/database.js').addWorkout(user_id, description, duration, date);
   //After updation get the recently added workout for the user
   const addedWorkout = updatedUser.log[updatedUser.log.length - 1];
-  
+
   //Serve the json with the user details and the recently added workout.
   res.json({
     "_id": updatedUser._id,
@@ -56,7 +66,7 @@ app.route('/api/users/:id/exercises').post(async(req, res) => {
 
 //Get requests
 //Get all the users
-app.route('/api/users').get(async(req,res) => {
+app.route('/api/users').get(async (req, res) => {
   //Get all the users in an array
   const allUsers = await require('./src/database.js').getAllUsers();
   //Send an Http response with the array
@@ -75,14 +85,14 @@ app.route('/api/users/:id/logs').get(async (req, res) => {
 
   //Query the database
   const result = await require("./src/database.js").getUser(user_id, from, to, limit);
-
   const logArray = limit === null ? result[0].log : result[0].log.slice(0, limit);
 
   //Respond with a JSON with all the dates converted to date string.
-  res.json({"_id": result[0]._id,
-  "username": result[0].username,
-  "count": result[0].log.length,
-  "log": logArray.map((e, i, a) => {
+  res.json({
+    "_id": result[0]._id,
+    "username": result[0].username,
+    "count": result[0].log.length,
+    "log": logArray.map((e, i, a) => {
       return ({
         "description": e.description,
         "duration": e.duration,
