@@ -24,12 +24,11 @@ const listener = app.listen(process.env.PORT || 3000, () => {
 //To create and save a user
 app.route('/api/users').post(async (req, res) => {
   //Get the user inputted username
-
-  console.log(req.body);
-
   const username = req.body.username;
+
   //Create and save the user
   const newUser = await require('./src/database.js').createUser(username);
+  
   //Serve json with the details of the newly created user
   res.json({ "username": newUser.username, "_id": newUser._id });
 });
